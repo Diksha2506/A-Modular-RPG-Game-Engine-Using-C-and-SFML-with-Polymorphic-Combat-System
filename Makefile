@@ -1,19 +1,19 @@
 CXX = g++
-CXXFLAGS = -std=c++14 -Wall -Wextra
-LIBS = -lsfml-graphics -lsfml-window -lsfml-system
+CXXFLAGS = -std=c++14 -Wall -Wextra -Iinclude
+LDFLAGS = -L. -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
 TARGET = game.exe
 
-SRCS = main.cpp Player.cpp Enemy.cpp
-OBJS = $(SRCS:.cpp=.o)
+SOURCES = $(wildcard src/*.cpp)
+OBJECTS = $(SOURCES:.cpp=.o)
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
+$(TARGET): $(OBJECTS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS) $(LDFLAGS)
 
-%.o: %.cpp
+src/%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f src/*.o $(TARGET)

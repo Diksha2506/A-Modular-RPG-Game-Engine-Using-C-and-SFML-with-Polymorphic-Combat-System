@@ -54,30 +54,13 @@ struct Prop
     sf::FloatRect hitbox;
     bool          solid = false;
     float         hp = 100.0f;
-    bool          isTree = false;
-    bool          isRock = false;
-    bool          isStone = false;
-    bool          isWood = false;
-    bool          isFood = false;
-    bool          isWater = false;
-    bool          isArmor = false;
-    bool          isWeaponLevel = false;
-    bool          isFarm = false;
-    bool          isHouse = false;
-    bool          isWell = false;
-    bool          isBush = false;
-    bool          isFlower = false;
-    bool          isFence = false;
-    bool          isStation = false;
-    int           stationType = 0; 
-    bool          isFurniture = false;
-    bool          isMetal = false;
-    int           variant = 0;
-    bool          isStump = false;
-    int           growthStage = 0; 
-    float         growthTimer = 0.0f;
-    int           animF = 0;
-    float         animT = 0.0f;
+    bool          isTree = false, isRock = false, isStone = false, isWood = false, isFood = false, isWater = false, isArmor = false, isWeaponLevel = false, isFarm = false, isHouse = false, isWell = false, isBush = false, isFlower = false, isFence = false, isStation = false, isFurniture = false, isMetal = false, isStump = false;
+    int           stationType = 0, variant = 0, growthStage = 0, animF = 0;
+    float         growthTimer = 0.f, animT = 0.f;
+
+    void setBaseOrigin(float w, float h, float bottomOffset = 16.f) {
+        sprite.setOrigin(w / 2.f, h - bottomOffset);
+    }
 };
 
 // ============================================================
@@ -92,6 +75,7 @@ private:
     Camera           camera;
     TileMap          mapGround;
     TileMap          mapWater;
+    TileMap          mapRiversideWalls;
 
     // Textures --------------------------------------------
     sf::Texture texFloors, texWaterTiles, texTree, texRock, texVeg, texFarm, texRes, texWalls;
@@ -163,6 +147,7 @@ private:
     // HQ Tree Constants (448x368 sheet: 4 variants, 2 rows)
     static constexpr int TREE_W = 112;
     static constexpr int TREE_H = 184;
+    static constexpr float ASSET_SCALE = 2.5f; 
 
     // Map helper methods
     float T()    const { return TILE_PX * TILE_SCALE; }
@@ -450,12 +435,21 @@ public:
     {
         std::vector<int> groundTiles(MAP_COLS * MAP_ROWS, T_GRASS);
         std::vector<int> waterTiles(MAP_COLS * MAP_ROWS, -1);
+        std::vector<int> riverWallTiles(MAP_COLS * MAP_ROWS, -1);
 
         for (int y = 0; y < MAP_ROWS; y++) {
             for (int x = 0; x < MAP_COLS; x++) {
                 float riverX = 10 + 3 * std::sin(y * 0.15f) + 2 * std::sin(y * 0.4f);
                 if (x >= riverX - 3 && x <= riverX + 1) {
                     waterTiles[y * MAP_COLS + x] = 16;
+                    groundTiles[y * MAP_COLS + x] = T_DIRT;
+                }
+                // Create brown dirt border on left bank
+                if (x >= (int)riverX - 6 && x < (int)riverX - 3) {
+                    groundTiles[y * MAP_COLS + x] = T_DIRT;
+                }
+                // Create brown dirt border on right bank
+                if (x > (int)riverX + 1 && x <= (int)riverX + 4) {
                     groundTiles[y * MAP_COLS + x] = T_DIRT;
                 }
                 if (x >= riverX + 2 && x <= riverX + 4)
@@ -472,8 +466,10 @@ public:
         }
         mapGround.load("assets_new/floors.png", {16, 16}, groundTiles, MAP_COLS, MAP_ROWS);
         mapWater.load("assets_new/water.png", {16, 16}, waterTiles, MAP_COLS, MAP_ROWS);
+        mapRiversideWalls.load("assets_new/walls_tile.png", {16, 16}, riverWallTiles, MAP_COLS, MAP_ROWS);
         mapGround.setScale(TILE_SCALE, TILE_SCALE);
         mapWater.setScale(TILE_SCALE, TILE_SCALE);
+        mapRiversideWalls.setScale(TILE_SCALE, TILE_SCALE);
     }
 
     void loadPropsLevel1()
@@ -498,6 +494,7 @@ public:
     {
         std::vector<int> groundTiles(MAP_COLS * MAP_ROWS, T_GRASS);
         std::vector<int> waterTiles(MAP_COLS * MAP_ROWS, -1);
+        std::vector<int> riverWallTiles(MAP_COLS * MAP_ROWS, -1);
 
         for (int y = 0; y < MAP_ROWS; y++) {
             for (int x = 0; x < MAP_COLS; x++) {
@@ -513,6 +510,13 @@ public:
                     waterTiles[y * MAP_COLS + x] = 16;
                     groundTiles[y * MAP_COLS + x] = T_DIRT;
                 }
+                // Create brown dirt borders around both rivers
+                if ((x >= (int)r1 - 5 && x < (int)r1 - 2) || (x > (int)r1 + 2 && x <= (int)r1 + 5)) {
+                    groundTiles[y * MAP_COLS + x] = T_DIRT;
+                }
+                if ((x >= (int)r2 - 5 && x < (int)r2 - 2) || (x > (int)r2 + 2 && x <= (int)r2 + 5)) {
+                    groundTiles[y * MAP_COLS + x] = T_DIRT;
+                }
 
                 // Rocky clearings
                 if ((x > 30 && x < 40 && y > 30 && y < 40) ||
@@ -526,8 +530,10 @@ public:
         }
         mapGround.load("assets_new/floors.png", {16, 16}, groundTiles, MAP_COLS, MAP_ROWS);
         mapWater.load("assets_new/water.png", {16, 16}, waterTiles, MAP_COLS, MAP_ROWS);
+        mapRiversideWalls.load("assets_new/walls_tile.png", {16, 16}, riverWallTiles, MAP_COLS, MAP_ROWS);
         mapGround.setScale(TILE_SCALE, TILE_SCALE);
         mapWater.setScale(TILE_SCALE, TILE_SCALE);
+        mapRiversideWalls.setScale(TILE_SCALE, TILE_SCALE);
         mapGround.setColor(sf::Color(160, 200, 160)); // Darker forest tint
     }
 
@@ -553,6 +559,7 @@ public:
     {
         std::vector<int> groundTiles(MAP_COLS * MAP_ROWS, T_ROCK); // Stone floor
         std::vector<int> waterTiles(MAP_COLS * MAP_ROWS, -1);
+        std::vector<int> riverWallTiles(MAP_COLS * MAP_ROWS, -1);
 
         for (int y = 0; y < MAP_ROWS; y++) {
             for (int x = 0; x < MAP_COLS; x++) {
@@ -573,6 +580,11 @@ public:
                     waterTiles[y * MAP_COLS + x] = 16; // Reuse water tile (orange tinted)
                     groundTiles[y * MAP_COLS + x] = T_ROCK;
                 }
+                // Create brown dirt border around lava
+                if ((x >= 33 && x <= 41 && y >= 33 && y <= 41) && 
+                    !((x > 35 && x < 40) && (y > 35 && y < 40))) {
+                    groundTiles[y * MAP_COLS + x] = T_DIRT;
+                }
 
                 // Borders are solid rock
                 if (x < 2 || x >= MAP_COLS - 2 || y < 2 || y >= MAP_ROWS - 2)
@@ -581,8 +593,10 @@ public:
         }
         mapGround.load("assets_new/floors.png", {16, 16}, groundTiles, MAP_COLS, MAP_ROWS);
         mapWater.load("assets_new/water.png", {16, 16}, waterTiles, MAP_COLS, MAP_ROWS);
+        mapRiversideWalls.load("assets_new/walls_tile.png", {16, 16}, riverWallTiles, MAP_COLS, MAP_ROWS);
         mapGround.setScale(TILE_SCALE, TILE_SCALE);
         mapWater.setScale(TILE_SCALE, TILE_SCALE);
+        mapRiversideWalls.setScale(TILE_SCALE, TILE_SCALE);
         mapWater.setColor(sf::Color(255, 80, 0, 200)); // Lava-orange tint
         mapGround.setColor(sf::Color(200, 190, 180)); // Dungeon stone tint
     }
@@ -1118,6 +1132,7 @@ public:
 
         window.draw(mapGround);
         window.draw(mapWater);
+        window.draw(mapRiversideWalls);
 
         // Sort props + player + enemies by Y
         std::vector<sf::Drawable*> drawList;
